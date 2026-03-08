@@ -343,6 +343,6 @@ class BlockCard(QFrame):
         self._val_lbls[param_id].setText(str(value))
         if self.midi.connected:
             tn = self.type_combo.currentText()
-            tup = BLOCK_TYPES[self.block_name].get(tn, (0x00, 0x00, 0x00))
-            self.midi.set_parameter(self.block_name, param_id, value, tup[0], tup[1])
+            type_tup = BLOCK_TYPES[self.block_name].get(tn, (0x00, 0x00, 0x00))
+            self.midi.set_parameter(self.block_name, param_id, value, type_tup)
         self.log_signal.emit(f"{self.block_name} param[{param_id}]={value}")
