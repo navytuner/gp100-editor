@@ -17,8 +17,11 @@ from PySide6.QtCore import Qt
 
 from constants import BLOCKS
 from midi import GP100MIDI
-from widgets import BlockCard, Arrow
-from style import GLOBAL_CSS, patch_css, conn_css, PORT_COMBO_CSS
+from widgets import PedalCard, Arrow
+from style import (
+    patch_css, conn_css, rgba, PORT_COMBO_CSS,
+    BG, SURFACE, ELEVATED, BORDER, TEXT, TEXT_DIM, TEXT_MUTED, ACCENT, FONT,
+)
 
 
 class GP100Editor(QMainWindow):
@@ -26,8 +29,8 @@ class GP100Editor(QMainWindow):
         super().__init__()
         self.midi = GP100MIDI()
         self.setWindowTitle("Valeton GP-100 Editor")
-        self.setMinimumSize(600, 520)
-        self.resize(1400, 660)
+        self.setMinimumSize(700, 480)
+        self.resize(1720, 640)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -35,79 +38,59 @@ class GP100Editor(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        root.addWidget(self._mk_titlebar())
-        root.addWidget(self._mk_connbar())
+        root.addWidget(self._mk_header())
         root.addWidget(self._mk_patchbar())
         root.addWidget(self._mk_chain(), stretch=1)
         root.addWidget(self._mk_log())
 
         self._refresh_ports()
 
-    # ── Title bar ──────────────────────────────────────────────────
+    # ── Header — brand + MIDI controls in one compact row ─────────
 
-    def _mk_titlebar(self) -> QWidget:
+    def _mk_header(self) -> QWidget:
         bar = QWidget()
-        bar.setFixedHeight(56)
+        bar.setFixedHeight(44)
         bar.setStyleSheet(
-            """
-            background:qlineargradient(x1:0,y1:0,x2:1,y2:0,
-                stop:0 #0D0D14, stop:0.5 #131320, stop:1 #0D0D14);
-            border-bottom:1px solid #191928;
-        """
+            f"background:{SURFACE}; border-bottom:1px solid {BORDER};"
         )
         lay = QHBoxLayout(bar)
-        lay.setContentsMargins(20, 0, 20, 0)
-
-        for txt, css in [
-            ("●", "color:#E94560;font-size:14px;"),
-            (
-                "VALETON GP-100",
-                "color:#E94560;font-family:'Courier New';"
-                "font-size:20px;font-weight:bold;letter-spacing:4px;margin-left:6px;",
-            ),
-            (
-                "/ PATCH EDITOR",
-                "color:#222240;font-family:'Courier New';"
-                "font-size:12px;letter-spacing:2px;margin-left:10px;",
-            ),
-        ]:
-            lbl = QLabel(txt)
-            lbl.setStyleSheet(css)
-            lay.addWidget(lbl)
-
-        lay.addStretch()
-        ver = QLabel("PySide6  v2.1")
-        ver.setStyleSheet("color:#1A1A30;font-family:'Courier New';font-size:10px;")
-        lay.addWidget(ver)
-        return bar
-
-    # ── MIDI connection bar ────────────────────────────────────────
-
-    def _mk_connbar(self) -> QWidget:
-        bar = QWidget()
-        bar.setFixedHeight(50)
-        bar.setStyleSheet("background:#0E0E18;border-bottom:1px solid #161626;")
-        lay = QHBoxLayout(bar)
-        lay.setContentsMargins(20, 0, 20, 0)
+        lay.setContentsMargins(16, 0, 16, 0)
         lay.setSpacing(10)
 
-        lbl = QLabel("MIDI PORT")
-        lbl.setStyleSheet(
-            "color:#2C2C48;font-family:'Courier New';font-size:11px;letter-spacing:2px;"
+        # Brand
+        dot = QLabel("\u25CF")
+        dot.setStyleSheet(f"color:{ACCENT}; font-size:12px;")
+        lay.addWidget(dot)
+
+        title = QLabel("GP-100 EDITOR")
+        title.setStyleSheet(
+            f"color:{ACCENT}; font-family:{FONT};"
+            "font-size:15px; font-weight:bold; letter-spacing:3px;"
         )
-        lay.addWidget(lbl)
+        lay.addWidget(title)
+
+        lay.addStretch()
+
+        # MIDI controls
+        midi_lbl = QLabel("MIDI")
+        midi_lbl.setStyleSheet(
+            f"color:{TEXT_MUTED}; font-family:{FONT}; font-size:10px; letter-spacing:2px;"
+        )
+        lay.addWidget(midi_lbl)
 
         self.port_combo = QComboBox()
-        self.port_combo.setMinimumWidth(260)
+        self.port_combo.setMinimumWidth(240)
         self.port_combo.setStyleSheet(PORT_COMBO_CSS)
         lay.addWidget(self.port_combo)
 
-        ref_btn = QPushButton("↺ REFRESH")
+        ref_btn = QPushButton("\u21BB")
+        ref_btn.setFixedSize(28, 28)
         ref_btn.setStyleSheet(
-            "QPushButton{background:#181828;color:#555570;border:1px solid #252545;"
-            "border-radius:4px;padding:5px 14px;font-family:'Courier New';font-size:11px;}"
-            "QPushButton:hover{color:#A0A0C0;}"
+            f"QPushButton{{background:{ELEVATED};color:{TEXT_DIM};border:1px solid {BORDER};"
+            f"border-radius:4px;font-size:14px;}}"
+            f"QPushButton:hover{{background:#3A3C52;color:{TEXT};}}"
         )
+        ref_btn.setToolTip("Refresh MIDI ports")
         ref_btn.clicked.connect(self._refresh_ports)
         lay.addWidget(ref_btn)
 
@@ -116,32 +99,32 @@ class GP100Editor(QMainWindow):
         self.conn_btn.clicked.connect(self._toggle_connect)
         lay.addWidget(self.conn_btn)
 
-        lay.addStretch()
-
-        self.status_dot = QLabel("●")
-        self.status_dot.setStyleSheet("color:#222240;font-size:12px;")
-        self.status_lbl = QLabel("DISCONNECTED")
-        self.status_lbl.setStyleSheet(
-            "color:#222240;font-family:'Courier New';font-size:11px;letter-spacing:2px;"
-        )
+        self.status_dot = QLabel("\u25CF")
+        self.status_dot.setStyleSheet(f"color:{TEXT_MUTED}; font-size:10px;")
         lay.addWidget(self.status_dot)
+
+        self.status_lbl = QLabel("OFFLINE")
+        self.status_lbl.setStyleSheet(
+            f"color:{TEXT_MUTED}; font-family:{FONT}; font-size:10px; letter-spacing:1px;"
+        )
         lay.addWidget(self.status_lbl)
+
         return bar
 
-    # ── Patch selector bar ─────────────────────────────────────────
+    # ── Patch bar ─────────────────────────────────────────────────
 
     def _mk_patchbar(self) -> QWidget:
         bar = QWidget()
-        bar.setFixedHeight(46)
-        bar.setStyleSheet("background:#0C0C18;border-bottom:1px solid #131320;")
+        bar.setFixedHeight(40)
+        bar.setStyleSheet(f"background:{BG}; border-bottom:1px solid {rgba(BORDER, 0.19)};")
         lay = QHBoxLayout(bar)
-        lay.setContentsMargins(20, 0, 20, 0)
-        lay.setSpacing(6)
+        lay.setContentsMargins(16, 0, 16, 0)
+        lay.setSpacing(5)
 
         lbl = QLabel("PATCH")
         lbl.setStyleSheet(
-            "color:#E94560;font-family:'Courier New';"
-            "font-size:11px;letter-spacing:3px;margin-right:8px;"
+            f"color:{ACCENT}; font-family:{FONT};"
+            "font-size:10px; letter-spacing:3px; margin-right:6px;"
         )
         lay.addWidget(lbl)
 
@@ -156,61 +139,61 @@ class GP100Editor(QMainWindow):
         lay.addStretch()
         return bar
 
-    # ── Horizontal effect chain ────────────────────────────────────
+    # ── Pedal chain ───────────────────────────────────────────────
 
     def _mk_chain(self) -> QScrollArea:
-        """Blocks laid out left-to-right with arrow connectors between them."""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("QScrollArea{border:none;background:#0D0D14;}")
+        scroll.setStyleSheet(f"QScrollArea{{border:none;background:{BG};}}")
 
         container = QWidget()
-        container.setStyleSheet("background:#0D0D14;")
+        container.setStyleSheet(f"background:{BG};")
         lay = QHBoxLayout(container)
-        lay.setContentsMargins(18, 14, 18, 14)
+        lay.setContentsMargins(20, 16, 20, 16)
         lay.setSpacing(0)
         lay.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-        self.block_cards: dict[str, BlockCard] = {}
+        self.pedal_cards: dict[str, PedalCard] = {}
         names = list(BLOCKS.keys())
 
         for i, name in enumerate(names):
-            card = BlockCard(name, self.midi)
+            card = PedalCard(name, self.midi)
             card.log_signal.connect(self._log)
             lay.addWidget(card)
-            self.block_cards[name] = card
+            self.pedal_cards[name] = card
             if i < len(names) - 1:
-                lay.addWidget(Arrow())
+                arrow = Arrow()
+                lay.addWidget(arrow, alignment=Qt.AlignVCenter)
 
         lay.addStretch()
         scroll.setWidget(container)
         return scroll
 
-    # ── SysEx log panel ────────────────────────────────────────────
+    # ── Log ───────────────────────────────────────────────────────
 
     def _mk_log(self) -> QWidget:
         w = QWidget()
-        w.setFixedHeight(88)
-        w.setStyleSheet("background:#080912;border-top:1px solid #121220;")
+        w.setFixedHeight(80)
+        w.setStyleSheet(f"background:{BG}; border-top:1px solid {rgba(BORDER, 0.19)};")
         lay = QVBoxLayout(w)
-        lay.setContentsMargins(16, 4, 16, 4)
+        lay.setContentsMargins(16, 4, 16, 6)
         lay.setSpacing(2)
 
         hdr = QHBoxLayout()
-        lbl = QLabel("SYSEX LOG")
+        lbl = QLabel("LOG")
         lbl.setStyleSheet(
-            "color:#202035;font-family:'Courier New';font-size:10px;letter-spacing:3px;"
+            f"color:{TEXT_MUTED}; font-family:{FONT}; font-size:9px; letter-spacing:3px;"
         )
         hdr.addWidget(lbl)
         hdr.addStretch()
 
         clr_btn = QPushButton("CLEAR")
         clr_btn.setStyleSheet(
-            "QPushButton{background:transparent;border:none;color:#202035;"
-            "font-family:'Courier New';font-size:10px;}"
-            "QPushButton:hover{color:#505070;}"
+            f"QPushButton{{background:transparent;border:none;color:{TEXT_MUTED};"
+            f"font-family:{FONT};font-size:9px;letter-spacing:1px;}}"
+            f"QPushButton:hover{{color:{TEXT_DIM};}}"
         )
         clr_btn.clicked.connect(lambda: self.log_text.clear())
         hdr.addWidget(clr_btn)
@@ -223,7 +206,7 @@ class GP100Editor(QMainWindow):
         lay.addWidget(self.log_text)
         return w
 
-    # ── Helpers ────────────────────────────────────────────────────
+    # ── Helpers ───────────────────────────────────────────────────
 
     def _log(self, msg: str):
         ts = time.strftime("%H:%M:%S")
@@ -247,27 +230,27 @@ class GP100Editor(QMainWindow):
             self.midi.disconnect()
             self.conn_btn.setText("CONNECT")
             self.conn_btn.setStyleSheet(conn_css(False))
-            self.status_dot.setStyleSheet("color:#222240;font-size:12px;")
+            self.status_dot.setStyleSheet(f"color:{TEXT_MUTED}; font-size:10px;")
             self.status_lbl.setStyleSheet(
-                "color:#222240;font-family:'Courier New';font-size:11px;"
+                f"color:{TEXT_MUTED}; font-family:{FONT}; font-size:10px;"
             )
-            self.status_lbl.setText("DISCONNECTED")
+            self.status_lbl.setText("OFFLINE")
         else:
             idx = self.port_combo.currentIndex()
             if idx < 0:
-                self._log("ERROR: No MIDI port selected")
+                self._log("No MIDI port selected")
                 return
             if self.midi.connect(idx):
                 self.conn_btn.setText("DISCONNECT")
                 self.conn_btn.setStyleSheet(conn_css(True))
-                self.status_dot.setStyleSheet("color:#2ECC71;font-size:12px;")
+                self.status_dot.setStyleSheet("color:#3D9; font-size:10px;")
                 self.status_lbl.setStyleSheet(
-                    "color:#2ECC71;font-family:'Courier New';font-size:11px;"
+                    f"color:#3D9; font-family:{FONT}; font-size:10px;"
                 )
-                self.status_lbl.setText(self.midi.port_name[:36])
+                self.status_lbl.setText(self.midi.port_name[:30])
                 self._log(f"Connected -> {self.midi.port_name}")
             else:
-                self._log("ERROR: Failed to connect")
+                self._log("Failed to connect")
 
     def _send_patch(self, idx: int):
         for i, btn in enumerate(self.patch_btns):

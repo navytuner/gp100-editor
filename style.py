@@ -1,116 +1,186 @@
-# style.py — Qt stylesheets and palette for GP-100 Editor
+# style.py — Theme and stylesheets for GP-100 Editor
 
 from PySide6.QtGui import QColor, QPalette
 
+# ── Color tokens ──────────────────────────────────────────────────────────────
+
+BG = "#1C1D2B"
+SURFACE = "#262838"
+ELEVATED = "#2F3148"
+BORDER = "#3A3D55"
+TEXT = "#E2E4F0"
+TEXT_DIM = "#8B8EA8"
+TEXT_MUTED = "#555770"
+ACCENT = "#FF6B6B"
+LOG_GREEN = "#7FD68A"
+
+FONT = "'JetBrains Mono','Cascadia Code','Consolas','Courier New',monospace"
+
 # ── Global stylesheet ──────────────────────────────────────────────────────────
 
-GLOBAL_CSS = """
-QMainWindow, QWidget { background:#0D0D14; color:#C0C0D8; }
+GLOBAL_CSS = f"""
+QMainWindow, QWidget {{ background:{BG}; color:{TEXT}; }}
 
-QScrollBar:horizontal { background:#0D0D14; height:6px; border:none; }
-QScrollBar::handle:horizontal { background:#2A2A45; border-radius:3px; min-width:30px; }
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width:0; }
+QScrollBar:horizontal {{
+    background:{BG}; height:8px; border:none; border-radius:4px;
+}}
+QScrollBar::handle:horizontal {{
+    background:{BORDER}; border-radius:4px; min-width:40px;
+}}
+QScrollBar::handle:horizontal:hover {{ background:{TEXT_MUTED}; }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width:0; }}
 
-QScrollBar:vertical { background:#0D0D14; width:5px; border:none; }
-QScrollBar::handle:vertical { background:#2A2A45; border-radius:2px; min-height:20px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }
+QScrollBar:vertical {{
+    background:transparent; width:5px; border:none; border-radius:2px;
+}}
+QScrollBar::handle:vertical {{
+    background:{BORDER}; border-radius:2px; min-height:20px;
+}}
+QScrollBar::handle:vertical:hover {{ background:{TEXT_MUTED}; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
 
-QTextEdit#log {
-    background:#080810; color:#00CC66;
-    border:1px solid #1A1A2E; border-radius:4px;
-    font-family:'Courier New'; font-size:11px; padding:3px;
-}
+QTextEdit#log {{
+    background:{SURFACE}; color:{LOG_GREEN};
+    border:1px solid {BORDER}; border-radius:6px;
+    font-family:{FONT}; font-size:11px; padding:4px 8px;
+}}
 """
 
-# ── Per-state CSS helpers ──────────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+
+def _rgb(hex_color: str) -> tuple[int, int, int]:
+    return int(hex_color[1:3], 16), int(hex_color[3:5], 16), int(hex_color[5:7], 16)
+
+
+def rgba(hex_color: str, alpha: float) -> str:
+    """Convert '#RRGGBB' + alpha (0.0–1.0) to 'rgba(r,g,b,a)' for Qt CSS."""
+    r, g, b = _rgb(hex_color)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def lighten(hex_color: str, amount: float = 0.2) -> str:
+    """Lighten a hex color by mixing with white."""
+    r, g, b = _rgb(hex_color)
+    r = min(255, int(r + (255 - r) * amount))
+    g = min(255, int(g + (255 - g) * amount))
+    b = min(255, int(b + (255 - b) * amount))
+    return f"#{r:02X}{g:02X}{b:02X}"
 
 
 def patch_css(active: bool) -> str:
-    bg, fg, bd, hv = (
-        ("#E94560", "white", "#E94560", "#FF5577")
-        if active
-        else ("#1A1A2E", "#606080", "#2A2A45", "#222240")
-    )
+    if active:
+        return (
+            f"QPushButton{{background:{ACCENT};color:white;border:none;"
+            f"border-radius:4px;padding:4px 12px;font-family:{FONT};"
+            f"font-size:12px;font-weight:bold;min-width:30px;}}"
+            f"QPushButton:hover{{background:#FF8585;}}"
+        )
     return (
-        f"QPushButton{{background:{bg};color:{fg};border:1px solid {bd};"
-        f"border-radius:4px;padding:4px 11px;font-family:'Courier New';"
-        f"font-size:13px;font-weight:bold;min-width:32px;}}"
-        f"QPushButton:hover{{background:{hv};color:white;}}"
+        f"QPushButton{{background:{SURFACE};color:{TEXT_DIM};border:1px solid {BORDER};"
+        f"border-radius:4px;padding:4px 12px;font-family:{FONT};"
+        f"font-size:12px;font-weight:bold;min-width:30px;}}"
+        f"QPushButton:hover{{background:{ELEVATED};color:{TEXT};}}"
     )
 
 
 def conn_css(connected: bool) -> str:
-    bg, hv = ("#27AE60", "#2ECC71") if connected else ("#E94560", "#FF5577")
+    if connected:
+        return (
+            f"QPushButton{{background:#3D9;color:#1C1D2B;border:none;"
+            f"border-radius:4px;padding:5px 14px;"
+            f"font-family:{FONT};font-size:11px;font-weight:bold;}}"
+            f"QPushButton:hover{{background:#5EB;}}"
+        )
     return (
-        f"QPushButton{{background:{bg};color:white;border:none;"
-        f"border-radius:4px;padding:6px 18px;"
-        f"font-family:'Courier New';font-size:11px;font-weight:bold;}}"
-        f"QPushButton:hover{{background:{hv};}}"
+        f"QPushButton{{background:{ACCENT};color:white;border:none;"
+        f"border-radius:4px;padding:5px 14px;"
+        f"font-family:{FONT};font-size:11px;font-weight:bold;}}"
+        f"QPushButton:hover{{background:#FF8585;}}"
     )
 
 
-def card_css(color: str, active: bool) -> str:
+def pedal_css(color: str, active: bool) -> str:
     if active:
         return f"""
-            QFrame#BlockCard {{
-                background:#14142A;
-                border:1px solid {color}50;
-                border-top:3px solid {color};
-                border-radius:8px;
+            QFrame#PedalCard {{
+                background:{SURFACE};
+                border:1px solid {rgba(color, 0.44)};
+                border-radius:10px;
             }}
         """
     return f"""
-        QFrame#BlockCard {{
-            background:#111120;
-            border:1px solid #1C1C30;
-            border-top:3px solid {color}28;
-            border-radius:8px;
+        QFrame#PedalCard {{
+            background:{SURFACE};
+            border:1px solid {rgba(color, 0.19)};
+            border-radius:10px;
         }}
     """
 
 
-def led_css(color: str, active: bool) -> str:
-    c = color if active else "#2A2A45"
+def faceplate_css(color: str, active: bool) -> str:
+    if active:
+        return (
+            f"background:{color}; color:#1C1D2B; font-family:{FONT};"
+            f"font-size:13px; font-weight:bold; letter-spacing:3px;"
+            f"border-top-left-radius:9px; border-top-right-radius:9px;"
+            f"padding:0 10px;"
+        )
     return (
-        f"QPushButton{{background:transparent;border:none;"
-        f"color:{c};font-size:16px;padding:0;}}"
-        f"QPushButton:hover{{color:{color}99;}}"
+        f"background:{rgba(color, 0.25)}; color:{TEXT_DIM}; font-family:{FONT};"
+        f"font-size:13px; font-weight:bold; letter-spacing:3px;"
+        f"border-top-left-radius:9px; border-top-right-radius:9px;"
+        f"padding:0 10px;"
     )
 
 
-def knob_combo_css(color: str) -> str:
-    """
-    Dropdown list height is capped at ~120px so it scrolls
-    instead of expanding the card when there are many items.
-    """
+def footswitch_css(color: str, active: bool) -> str:
+    if active:
+        hover_color = lighten(color, 0.25)
+        return (
+            f"QPushButton{{background:{color};color:#1C1D2B;border:none;"
+            f"border-radius:6px;padding:8px;font-family:{FONT};"
+            f"font-size:11px;font-weight:bold;letter-spacing:1px;}}"
+            f"QPushButton:hover{{background:{hover_color};}}"
+        )
+    return (
+        f"QPushButton{{background:{rgba(color, 0.12)};color:{rgba(color, 0.56)};border:1px solid {rgba(color, 0.19)};"
+        f"border-radius:6px;padding:8px;font-family:{FONT};"
+        f"font-size:11px;font-weight:bold;letter-spacing:1px;}}"
+        f"QPushButton:hover{{background:{rgba(color, 0.19)};color:{rgba(color, 0.73)};}}"
+    )
+
+
+def pedal_combo_css(color: str) -> str:
     return f"""
         QComboBox {{
-            background:#181828; color:#A0A0C0;
-            border:1px solid {color}38;
-            border-radius:3px; padding:2px 6px;
-            font-family:'Courier New'; font-size:10px; min-height:20px;
+            background:{BG}; color:{TEXT};
+            border:1px solid {BORDER};
+            border-radius:4px; padding:3px 8px;
+            font-family:{FONT}; font-size:10px; min-height:20px;
         }}
-        QComboBox:hover {{ border-color:{color}66; color:#C8C8E0; }}
-        QComboBox::drop-down {{ border:none; width:14px; }}
+        QComboBox:hover {{ border-color:{rgba(color, 0.5)}; }}
+        QComboBox::drop-down {{ border:none; width:16px; }}
         QComboBox QAbstractItemView {{
-            background:#181828; color:#A0A0C0;
-            selection-background-color:#252545;
-            font-family:'Courier New'; font-size:10px;
-            max-height:120px;
+            background:{SURFACE}; color:{TEXT};
+            selection-background-color:{rgba(color, 0.19)};
+            font-family:{FONT}; font-size:10px;
+            border:1px solid {BORDER}; border-radius:4px;
+            outline:none;
         }}
     """
 
 
-PORT_COMBO_CSS = """
-    QComboBox{background:#14142A;color:#9090B8;border:1px solid #252545;
-              border-radius:4px;padding:3px 10px;
-              font-family:'Courier New';font-size:11px;min-height:22px;}
-    QComboBox:hover{border-color:#353560;}
-    QComboBox::drop-down{border:none;width:18px;}
-    QComboBox QAbstractItemView{background:#14142A;color:#9090B8;
-        selection-background-color:#252545;
-        font-family:'Courier New';font-size:11px;
-        max-height:160px;}
+PORT_COMBO_CSS = f"""
+    QComboBox{{background:{SURFACE};color:{TEXT};border:1px solid {BORDER};
+              border-radius:4px;padding:4px 10px;
+              font-family:{FONT};font-size:11px;min-height:20px;}}
+    QComboBox:hover{{border-color:{TEXT_MUTED};}}
+    QComboBox::drop-down{{border:none;width:18px;}}
+    QComboBox QAbstractItemView{{background:{SURFACE};color:{TEXT};
+        selection-background-color:{ELEVATED};
+        font-family:{FONT};font-size:11px;
+        border:1px solid {BORDER};}}
 """
 
 # ── Palette ────────────────────────────────────────────────────────────────────
@@ -118,12 +188,12 @@ PORT_COMBO_CSS = """
 
 def apply_dark_palette(app):
     pal = QPalette()
-    pal.setColor(QPalette.Window, QColor("#0D0D14"))
-    pal.setColor(QPalette.WindowText, QColor("#C0C0D8"))
-    pal.setColor(QPalette.Base, QColor("#12121E"))
-    pal.setColor(QPalette.Text, QColor("#C0C0D8"))
-    pal.setColor(QPalette.Button, QColor("#1A1A2E"))
-    pal.setColor(QPalette.ButtonText, QColor("#C0C0D8"))
-    pal.setColor(QPalette.Highlight, QColor("#E94560"))
+    pal.setColor(QPalette.Window, QColor(BG))
+    pal.setColor(QPalette.WindowText, QColor(TEXT))
+    pal.setColor(QPalette.Base, QColor(SURFACE))
+    pal.setColor(QPalette.Text, QColor(TEXT))
+    pal.setColor(QPalette.Button, QColor(ELEVATED))
+    pal.setColor(QPalette.ButtonText, QColor(TEXT))
+    pal.setColor(QPalette.Highlight, QColor(ACCENT))
     pal.setColor(QPalette.HighlightedText, QColor("#FFFFFF"))
     app.setPalette(pal)

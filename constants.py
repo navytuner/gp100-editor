@@ -97,7 +97,7 @@ BLOCK_TYPES = {
     },
     "NR": {
         "Gate 1": (0x01, 0x0D, 0x00),
-        "Gate 1": (0x01, 0x0B, 0x00),
+        "Gate 2": (0x01, 0x0B, 0x00),
     },
     "CAB": {
         "TWD 2x12": (0x01, 0x02, 0x0A),
@@ -187,15 +187,15 @@ BLOCK_TYPES = {
 }
 
 BLOCK_COLORS = {
-    "PRE": "#E74C3C",
-    "DST": "#E67E22",
-    "AMP": "#F1C40F",
-    "NR": "#2ECC71",
-    "CAB": "#1ABC9C",
-    "EQ": "#3498DB",
-    "MOD": "#9B59B6",
-    "DLY": "#E91E63",
-    "RVB": "#00BCD4",
+    "PRE": "#FF7B7B",
+    "DST": "#FFB07C",
+    "AMP": "#FFD93D",
+    "NR": "#6BCB77",
+    "CAB": "#4DD0A1",
+    "EQ": "#61AFEF",
+    "MOD": "#C678DD",
+    "DLY": "#FF79C6",
+    "RVB": "#56CCF2",
 }
 
 PARAM_NAMES = {
@@ -208,6 +208,104 @@ PARAM_NAMES = {
     "DELAY": ["Time", "Feedback", "Mix"],
     "REVERB": ["Pre-Delay", "Decay", "Mix"],
 }
+
+# Per-type parameter names — maps each effect type to its knob labels.
+# Falls back to block-category defaults if a type is missing here.
+BLOCK_DEFAULT_PARAMS = {
+    "PRE": ["Param 1", "Param 2", "Level"],
+    "DST": ["Drive", "Tone", "Level"],
+    "AMP": ["Volume", "Tone", "Balance"],
+    "NR": ["Threshold"],
+    "CAB": ["Low", "High"],
+    "EQ": ["Low", "Mid", "High"],
+    "MOD": ["Rate", "Depth", "Level"],
+    "DLY": ["Time", "Feedback", "Mix"],
+    "RVB": ["Pre-Delay", "Decay", "Mix"],
+}
+
+TYPE_PARAMS = {
+    # PRE types
+    "COMP": ["Sustain", "Attack", "Level"],
+    "COMP4": ["Sustain", "Attack", "Level"],
+    "Boost": ["Drive", "Tone", "Level"],
+    "AC Sim": ["Body", "Top", "Level"],
+    "T-WAH": ["Sens", "Freq", "Peak"],
+    "A-WAH": ["Sens", "Freq", "Peak"],
+    "V-WAH": ["Sens", "Freq", "Peak"],
+    "C-WAH": ["Sens", "Freq", "Peak"],
+    "OCTA": ["Tone", "Oct", "Level"],
+    "Pitch": ["Pitch", "Fine", "Level"],
+    "P-Bend": ["Pitch", "Time", "Level"],
+    "Saturate": ["Drive", "Tone", "Level"],
+    "Step Filter": ["Rate", "Depth", "Level"],
+    "Ring Mod": ["Freq", "Tone", "Level"],
+    # DST types — all share Drive/Tone/Level
+    "Scream OD": ["Drive", "Tone", "Level"],
+    "Tube Clipper": ["Drive", "Tone", "Level"],
+    "TaiChi OD": ["Drive", "Tone", "Level"],
+    "Plustortion": ["Drive", "Tone", "Level"],
+    "Chief": ["Drive", "Tone", "Level"],
+    "Green OD": ["Drive", "Tone", "Level"],
+    "Yellow OD": ["Drive", "Tone", "Level"],
+    "Super OD": ["Drive", "Tone", "Level"],
+    "Blues OD": ["Drive", "Tone", "Level"],
+    "Lazaro": ["Drive", "Tone", "Level"],
+    "Red Haze": ["Drive", "Tone", "Level"],
+    "Darktale": ["Drive", "Tone", "Level"],
+    "Flex OD": ["Drive", "Tone", "Level"],
+    "SM Dist": ["Drive", "Tone", "Level"],
+    "La Charger": ["Drive", "Tone", "Level"],
+    "Bass Dist": ["Drive", "Tone", "Level"],
+    # NR types
+    "Gate 1": ["Threshold"],
+    # EQ types
+    "EQ1": ["Low", "Mid", "High"],
+    "EQ2": ["Low", "Mid", "High"],
+    "Mess EQ": ["Low", "Mid", "High"],
+    # MOD types
+    "A-Chorus": ["Rate", "Depth", "Level"],
+    "G-Chorus": ["Rate", "Depth", "Level"],
+    "B-Chorus": ["Rate", "Depth", "Level"],
+    "Detune": ["Detune", "Tone", "Mix"],
+    "Flanger": ["Rate", "Depth", "Level"],
+    "Vibrato": ["Rate", "Depth", "Level"],
+    "Phaser": ["Rate", "Depth", "Level"],
+    "Vibe": ["Rate", "Depth", "Level"],
+    "Opto Trem": ["Rate", "Depth", "Level"],
+    "Sine Trem": ["Rate", "Depth", "Level"],
+    "Triangle Trem": ["Rate", "Depth", "Level"],
+    "Bias Trem": ["Rate", "Depth", "Level"],
+    # DLY types
+    "Sweet": ["Time", "Feedback", "Mix"],
+    "P-Echo": ["Time", "Feedback", "Mix"],
+    "M-Echo": ["Time", "Feedback", "Mix"],
+    "T-Echo": ["Time", "Feedback", "Mix"],
+    "999 Echo": ["Time", "Feedback", "Mix"],
+    "Rev Echo": ["Time", "Feedback", "Mix"],
+    "Slapbk": ["Time", "Feedback", "Mix"],
+    "Vin-Rack": ["Time", "Feedback", "Mix"],
+    "Swp Echo": ["Time", "Feedback", "Mix"],
+    "Ping Pong": ["Time", "Feedback", "Mix"],
+    "M-Echo2": ["Time", "Feedback", "Mix"],
+    # RVB types
+    "Room": ["Pre-Delay", "Decay", "Mix"],
+    "Hall": ["Pre-Delay", "Decay", "Mix"],
+    "Church": ["Pre-Delay", "Decay", "Mix"],
+    "Plate": ["Pre-Delay", "Decay", "Mix"],
+    "Spring": ["Pre-Delay", "Decay", "Mix"],
+    "N-Star": ["Pre-Delay", "Decay", "Mix"],
+    "Deep Sea": ["Pre-Delay", "Decay", "Mix"],
+    "Mod Verb": ["Pre-Delay", "Decay", "Mix"],
+    "Clear Sky": ["Pre-Delay", "Decay", "Mix"],
+}
+
+
+def get_type_params(block_name: str, type_name: str) -> list[str]:
+    """Get parameter names for a specific effect type, with fallbacks."""
+    if type_name in TYPE_PARAMS:
+        return TYPE_PARAMS[type_name]
+    return BLOCK_DEFAULT_PARAMS.get(block_name, ["P1", "P2", "P3"])
+
 
 PARAM_VALUE = [
     [0x00, 0x00, 0x00, 0x00],
