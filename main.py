@@ -1,10 +1,5 @@
-#!/usr/bin/env python3
-# main.py — Entry point for GP-100 Editor
-#
-# Usage:  python main.py
-# Deps:   pip install PySide6 python-rtmidi
-
 import sys
+
 from PySide6.QtWidgets import QApplication
 
 from mainwindow import GP100Editor

@@ -1,7 +1,8 @@
 # midi.py — MIDI communication for GP-100
 
 import rtmidi
-from constants import HEADER, BLOCKS, BLOCK_TYPES, PARAM_VALUE
+
+from constants import BLOCK_TYPES, BLOCKS, HEADER, PARAM_VALUE
 
 
 class GP100MIDI:

@@ -2,36 +2,43 @@
 
 import math
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QFrame,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QComboBox,
-    QSizePolicy,
-    QScrollArea,
-    QListView,
-    QGraphicsDropShadowEffect,
-)
-from PySide6.QtCore import Qt, Signal, QRect, QPoint
+from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import (
+    QBrush,
     QColor,
     QPainter,
     QPen,
-    QBrush,
-    QRadialGradient,
     QPolygon,
+    QRadialGradient,
+)
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QListView,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
 
 from constants import BLOCK_COLORS, BLOCK_TYPES, get_type_params
 from midi import GP100MIDI
 from style import (
-    pedal_css, faceplate_css, footswitch_css, pedal_combo_css,
-    SURFACE, ELEVATED, BORDER, TEXT_DIM, TEXT_MUTED, FONT,
+    BORDER,
+    ELEVATED,
+    FONT,
+    SURFACE,
+    TEXT_DIM,
+    TEXT_MUTED,
+    faceplate_css,
+    footswitch_css,
+    pedal_combo_css,
+    pedal_css,
 )
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  Knob

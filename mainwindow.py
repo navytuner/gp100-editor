@@ -2,26 +2,37 @@
 
 import time
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
+    QComboBox,
     QHBoxLayout,
     QLabel,
+    QMainWindow,
     QPushButton,
-    QComboBox,
-    QTextEdit,
     QScrollArea,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Qt
 
 from constants import BLOCKS
 from midi import GP100MIDI
-from widgets import PedalCard, Arrow
 from style import (
-    patch_css, conn_css, rgba, PORT_COMBO_CSS,
-    BG, SURFACE, ELEVATED, BORDER, TEXT, TEXT_DIM, TEXT_MUTED, ACCENT, FONT,
+    ACCENT,
+    BG,
+    BORDER,
+    ELEVATED,
+    FONT,
+    PORT_COMBO_CSS,
+    SURFACE,
+    TEXT,
+    TEXT_DIM,
+    TEXT_MUTED,
+    conn_css,
+    patch_css,
+    rgba,
 )
+from widgets import Arrow, PedalCard
 
 
 class GP100Editor(QMainWindow):
