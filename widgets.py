@@ -156,11 +156,15 @@ class Arrow(QWidget):
 
         p.setPen(Qt.NoPen)
         p.setBrush(QBrush(QColor(TEXT_MUTED)))
-        p.drawPolygon(QPolygon([
-            QPoint(self.width() - 3, cy),
-            QPoint(self.width() - 10, cy - 4),
-            QPoint(self.width() - 10, cy + 4),
-        ]))
+        p.drawPolygon(
+            QPolygon(
+                [
+                    QPoint(self.width() - 3, cy),
+                    QPoint(self.width() - 10, cy - 4),
+                    QPoint(self.width() - 10, cy + 4),
+                ]
+            )
+        )
         p.end()
 
 
@@ -245,7 +249,7 @@ class PedalCard(QFrame):
         body_lay.addWidget(scroll, stretch=1)
 
         # Footswitch
-        self.footswitch = QPushButton("\u23FB  OFF")
+        self.footswitch = QPushButton("\u23fb  OFF")
         self.footswitch.setFixedHeight(34)
         self.footswitch.clicked.connect(self._toggle)
         body_lay.addWidget(self.footswitch)
@@ -266,7 +270,7 @@ class PedalCard(QFrame):
         self.setStyleSheet(pedal_css(self.color, self.enabled))
         self.faceplate.setStyleSheet(faceplate_css(self.color, self.enabled))
         self.footswitch.setStyleSheet(footswitch_css(self.color, self.enabled))
-        self.footswitch.setText("\u23FB  ON" if self.enabled else "\u23FB  OFF")
+        self.footswitch.setText("\u23fb  ON" if self.enabled else "\u23fb  OFF")
         self._shadow.setEnabled(self.enabled)
 
         # Update knob colors — use block's own color, dimmed when OFF
@@ -356,6 +360,6 @@ class PedalCard(QFrame):
             self._val_lbls[param_id].setText(str(value))
         if self.midi.connected:
             tn = self.type_combo.currentText()
-            type_tup = BLOCK_TYPES.get(self.block_name, {}).get(tn, (0x00, 0x00, 0x00))
-            self.midi.set_parameter(self.block_name, param_id, value, type_tup)
+            code = BLOCK_TYPES.get(self.block_name, {}).get(tn, 0)
+            self.midi.set_parameter(self.block_name, param_id, value, code)
         self.log_signal.emit(f"{self.block_name} param[{param_id}]={value}")

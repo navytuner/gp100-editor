@@ -1,8 +1,38 @@
 # midi.py — MIDI communication for GP-100
 
 import rtmidi
+import struct
 
-from constants import BLOCK_TYPES, BLOCKS, HEADER, PARAM_VALUE
+from constants import BLOCK_TYPES, BLOCKS, HEADER, BLOCK_DEFAULT_PARAMS, TYPE_PARAMS
+
+
+def get_type_params(block_name: str, type_name: str) -> list[str]:
+    if (block_name, type_name) in TYPE_PARAMS:
+        return TYPE_PARAMS[(block_name, type_name)]
+    return BLOCK_DEFAULT_PARAMS.get(block_name, ["P1", "P2", "P3"])
+
+
+def nibbles(value: int, n_bytes: int) -> list[int]:
+    out = []
+    for i in range(n_bytes):
+        b = (value >> (8 * i)) & 0xFF
+        out += [b >> 4, b & 0xF]
+    return out
+
+
+def param_value(value: float) -> list[int]:
+    """
+    Encode a parameter value
+
+    The device takes the top 16 bits of the IEEE-754 float32
+    and splits them into four nibbles, low byte first, high nibble first within
+    each byte:
+
+        99.0 -> 0x42C6 -> [0x0C, 0x06, 0x04, 0x02]
+
+    """
+    hi, lo = struct.pack(">f", float(value))[:2]
+    return nibbles((hi << 8) | lo, 2)
 
 
 class GP100MIDI:
@@ -51,113 +81,7 @@ class GP100MIDI:
         except Exception as e:
             print(f"Send error: {e}")
 
-    def set_block_enabled(self, block_name, enabled):
-        block_id = BLOCKS[block_name]
-        data = [
-            0x10,
-            block_id,
-            0x00,
-            0x00,
-            0x00,
-            0x01 if enabled else 0x00,
-            0x00,
-            0x00,
-            0x00,
-        ]
-        self.send_sysex(data)
-
-    def set_block_type(self, block_name, type_name):
-        block_id = BLOCKS[block_name]
-        type_tup = BLOCK_TYPES[block_name][type_name]
-        headers = [
-            [
-                0x00,
-                0x00,
-                0x10,
-                0x00,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-            ],
-            [
-                0x00,
-                0x00,
-                0x10,
-                0x03,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-            ],
-            [
-                0x00,
-                0x00,
-                0x10,
-                0x06,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x0F,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-            ],
-        ]
-        for h in headers:
-            self.send_sysex(h)
-        self.send_sysex(
-            [
-                0x10,
-                block_id,
-                0x00,
-                0x01,
-                type_tup[0],
-                type_tup[1],
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                type_tup[2],
-            ]
-        )
-        self.send_sysex([0x10, block_id, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00])
-
-    def set_patch(self, patch_number):
+    def set_patch(self, patch_number: int):
         self.send_sysex(
             [
                 0x00,
@@ -165,43 +89,27 @@ class GP100MIDI:
                 0x00,
                 0x00,
                 0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                patch_number,
+                0x00,  # TODO: support F(default patches), extending it to 0x01
                 0x00,
                 0x00,
             ]
+            + nibbles(patch_number, 1)
+            + [0x00, 0x00]
         )
 
-    def set_parameter(self, block_name, param_id, value, type_tup):
-        block_id = BLOCKS[block_name]
-        data = [
-            0x10,
-            block_id,
-            0x00,
-            0x02,
-            type_tup[0],
-            type_tup[1],
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            type_tup[2],
-        ]
-        data += [
-            0x00,
-            param_id,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-        ]
-        data += PARAM_VALUE[value]
-        print(data)
+    def set_block_enabled(self, block_name: str, enabled: bool):
+        self.send_sysex(
+            [0x10, BLOCKS[block_name], 0x00, 0x00] + nibbles(int(enabled), 2)
+        )
+
+    def set_block_type(self, block_name: str, type_name: str):
+        code = BLOCK_TYPES[block_name][type_name]
+        self.send_sysex([0x10, BLOCKS[block_name], 0x00, 0x01] + nibbles(code, 4))
+        self.set_block_enabled(block_name, True)
+
+    def set_parameter(self, block_name: str, param_id: int, value: float, code: int):
+        data = [0x10, BLOCKS[block_name], 0x00, 0x02]
+        data += nibbles(code, 4)
+        data += nibbles(param_id, 4)
+        data += param_value(value)
         self.send_sysex(data)
-        return 0
