@@ -1,15 +1,29 @@
 # midi.py — MIDI communication for GP-100
 
-import rtmidi
 import struct
 
-from constants import BLOCK_TYPES, BLOCKS, HEADER, BLOCK_DEFAULT_PARAMS, TYPE_PARAMS
+import rtmidi
+
+from constants import (
+    BLOCK_DEFAULT_PARAMS,
+    BLOCK_TYPES,
+    BLOCKS,
+    HEADER,
+    TYPE_CONTROLS,
+    Control,
+)
+
+
+def get_type_controls(block_name: str, type_name: str) -> tuple[Control, ...]:
+    controls = TYPE_CONTROLS.get((block_name, type_name))
+    if controls is not None:
+        return controls
+    names = BLOCK_DEFAULT_PARAMS.get(block_name, ["P1", "P2", "P3"])
+    return tuple(Control(n, default=50) for n in names)
 
 
 def get_type_params(block_name: str, type_name: str) -> list[str]:
-    if (block_name, type_name) in TYPE_PARAMS:
-        return TYPE_PARAMS[(block_name, type_name)]
-    return BLOCK_DEFAULT_PARAMS.get(block_name, ["P1", "P2", "P3"])
+    return [c.name for c in get_type_controls(block_name, type_name)]
 
 
 def nibbles(value: int, n_bytes: int) -> list[int]:

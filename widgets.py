@@ -25,8 +25,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from constants import BLOCK_COLORS, BLOCK_TYPES, get_type_params
-from midi import GP100MIDI
+from constants import BLOCK_COLORS, BLOCK_TYPES
+from midi import GP100MIDI, get_type_controls
 from style import (
     BORDER,
     ELEVATED,
@@ -46,31 +46,49 @@ from style import (
 
 
 class Knob(QWidget):
-    valueChanged = Signal(int)
+    valueChanged = Signal(float)
 
     START_ANGLE = 225
     SPAN = 270
-    SENSITIVITY = 1.0
+    DRAG_PIXELS = 100  # pixels of drag for a full sweep
 
-    def __init__(self, color: str = "#61AFEF", parent=None):
+    def __init__(
+        self,
+        color: str = "#61AFEF",
+        lo: float = 0.0,
+        hi: float = 99.0,
+        step: float = 1.0,
+        parent=None,
+    ):
         super().__init__(parent)
         self.color = QColor(color)
-        self._value = 50
+        self.lo = float(lo)
+        self.hi = float(hi)
+        self.step = float(step) or 1.0
+        self._value = self.lo
         self._drag_y = None
         self._drag_val = None
         self.setFixedSize(54, 54)
         self.setCursor(Qt.SizeVerCursor)
         self.setToolTip("Drag up/down or scroll")
 
-    def value(self) -> int:
+    def value(self) -> float:
         return self._value
 
-    def setValue(self, v: int):
-        v = max(0, min(99, int(v)))
+    def setValue(self, v: float):
+        v = self.lo + round((v - self.lo) / self.step) * self.step
+        low, high = sorted((self.lo, self.hi))
+        v = round(max(low, min(high, v)), 3)
         if v != self._value:
             self._value = v
             self.update()
             self.valueChanged.emit(v)
+
+    def ratio(self) -> float:
+        span = self.hi - self.lo
+        if not span:
+            return 0.0
+        return max(0.0, min(1.0, (self._value - self.lo) / span))
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
@@ -81,13 +99,14 @@ class Knob(QWidget):
         if self._drag_y is None:
             return
         delta = self._drag_y - e.globalPosition().y()
-        self.setValue(self._drag_val + int(delta / self.SENSITIVITY))
+        self.setValue(self._drag_val + delta * (self.hi - self.lo) / self.DRAG_PIXELS)
 
     def mouseReleaseEvent(self, _):
         self._drag_y = None
 
     def wheelEvent(self, e):
-        self.setValue(self._value + (1 if e.angleDelta().y() > 0 else -1))
+        d = math.copysign(self.step, self.hi - self.lo)
+        self.setValue(self._value + (d if e.angleDelta().y() > 0 else -d))
 
     def paintEvent(self, _):
         p = QPainter(self)
@@ -97,7 +116,7 @@ class Knob(QWidget):
         cx, cy = w / 2, h / 2
         ro = min(w, h) / 2 - 2
         ri = ro - 5
-        ratio = self._value / 99.0
+        ratio = self.ratio()
 
         # Track
         p.setPen(QPen(QColor(BORDER), 3.5, Qt.SolidLine, Qt.RoundCap))
@@ -175,6 +194,16 @@ class Arrow(QWidget):
 PEDAL_WIDTH = 154
 
 
+def fmt_value(control, value) -> str:
+    """Render a control's value the way it should read next to the control."""
+    if control.options:
+        for label, val in control.options:
+            if val == value:
+                return label
+        return str(value)
+    return f"{value:.1f}" if control.step < 1 else f"{int(value)}"
+
+
 class PedalCard(QFrame):
     log_signal = Signal(str)
 
@@ -190,7 +219,7 @@ class PedalCard(QFrame):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
         self.knobs: list[Knob] = []
-        self._val_lbls: list[QLabel] = []
+        self._val_lbls: dict[int, QLabel] = {}
 
         self._build()
         self._apply_state()
@@ -294,12 +323,12 @@ class PedalCard(QFrame):
         if not type_name:
             return
 
-        params = get_type_params(self.block_name, type_name)
+        controls = get_type_controls(self.block_name, type_name)
         knob_qcolor = QColor(self.color)
         if not self.enabled:
             knob_qcolor.setAlpha(100)
 
-        for i, pname in enumerate(params):
+        for i, ctl in enumerate(controls):
             row_widget = QWidget()
             row_widget.setStyleSheet("background:transparent;")
             col = QVBoxLayout(row_widget)
@@ -307,32 +336,49 @@ class PedalCard(QFrame):
             col.setContentsMargins(0, 2, 0, 2)
 
             # Label
-            name_lbl = QLabel(pname.upper())
+            name_lbl = QLabel(ctl.name.upper())
             name_lbl.setStyleSheet(
                 f"color:{TEXT_MUTED}; font-family:{FONT}; font-size:9px; letter-spacing:1px;"
             )
             col.addWidget(name_lbl)
 
-            # Knob + value
             row = QHBoxLayout()
             row.setSpacing(6)
             row.setContentsMargins(0, 0, 0, 0)
 
-            knob = Knob(color=knob_qcolor)
-            knob.setValue(50)
-            knob.valueChanged.connect(lambda v, pid=i: self._on_knob(pid, v))
-            self.knobs.append(knob)
+            if ctl.kind == "knob":
+                knob = Knob(color=knob_qcolor, lo=ctl.lo, hi=ctl.hi, step=ctl.step)
+                knob.setValue(ctl.default)  # set before connecting, so it doesn't send
+                knob.valueChanged.connect(lambda v, pid=i: self._on_param(pid, v))
+                self.knobs.append(knob)
 
-            val_lbl = QLabel("50")
-            val_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-            val_lbl.setFixedWidth(28)
-            val_lbl.setStyleSheet(
-                f"color:{TEXT_DIM}; font-family:{FONT}; font-size:12px; font-weight:bold;"
-            )
-            self._val_lbls.append(val_lbl)
+                val_lbl = QLabel(fmt_value(ctl, knob.value()))
+                val_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                val_lbl.setFixedWidth(38)
+                val_lbl.setStyleSheet(
+                    f"color:{TEXT_DIM}; font-family:{FONT}; font-size:12px; font-weight:bold;"
+                )
+                self._val_lbls[i] = val_lbl
 
-            row.addWidget(knob, alignment=Qt.AlignVCenter)
-            row.addWidget(val_lbl, alignment=Qt.AlignVCenter)
+                row.addWidget(knob, alignment=Qt.AlignVCenter)
+                row.addWidget(val_lbl, alignment=Qt.AlignVCenter)
+            else:
+                # switches and dropdowns are both option lists on the wire
+                box = QComboBox()
+                box.addItems([label for label, _ in ctl.options])
+                box.setStyleSheet(pedal_combo_css(self.color))
+                box.setView(QListView())
+                box.setCurrentIndex(
+                    next(
+                        (n for n, (_, v) in enumerate(ctl.options) if v == ctl.default),
+                        0,
+                    )
+                )
+                box.currentIndexChanged.connect(
+                    lambda n, pid=i, c=ctl: self._on_param(pid, c.options[n][1])
+                )
+                row.addWidget(box)
+
             row.addStretch()
             col.addLayout(row)
 
@@ -355,11 +401,13 @@ class PedalCard(QFrame):
             self.midi.set_block_type(self.block_name, type_name)
         self.log_signal.emit(f"{self.block_name} type -> {type_name}")
 
-    def _on_knob(self, param_id: int, value: int):
-        if param_id < len(self._val_lbls):
-            self._val_lbls[param_id].setText(str(value))
+    def _on_param(self, param_id: int, value: float):
+        tn = self.type_combo.currentText()
+        controls = get_type_controls(self.block_name, tn)
+        lbl = self._val_lbls.get(param_id)
+        if lbl is not None and param_id < len(controls):
+            lbl.setText(fmt_value(controls[param_id], value))
         if self.midi.connected:
-            tn = self.type_combo.currentText()
             code = BLOCK_TYPES.get(self.block_name, {}).get(tn, 0)
             self.midi.set_parameter(self.block_name, param_id, value, code)
         self.log_signal.emit(f"{self.block_name} param[{param_id}]={value}")
